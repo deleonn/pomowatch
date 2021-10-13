@@ -7,22 +7,18 @@
 
 import SwiftUI
 
-struct OptionsView: View {
-    @Binding var optionsViewShown: Bool
-    var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Placeholder"/*@END_MENU_TOKEN@*/)
-    }
-}
-
 struct MainView: View {
     @State var optionsViewShown: Bool = false
     @State private var clicked: Bool = false
-    @State private var counterActive: Bool = false
+    @State private var isActive: Bool = false
     @State private var type = 3 // 0 = pomo, 1 = short, 2 = long, 3 = stop
     @State private var timeRemaining = 25 * 60
     
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     let formatter = DateComponentsFormatter()
+    let pomodoroTimer: TimerModel
+    let shortBreakTimer: TimerModel
+    let longBreakTimer: TimerModel
     
     func options() {
         self.clicked = true
@@ -30,17 +26,17 @@ struct MainView: View {
     }
     
     func startTimer() {
-        self.counterActive = true
+        self.isActive = true
         self.type = 0
     }
     
     func pauseTimer() {
-        self.counterActive = false
+        self.isActive = false
         self.type = 3
     }
     
     func cancelTimer() {
-        self.counterActive = false
+        self.isActive = false
         self.type = 3
         self.timeRemaining = 25 * 60
     }
@@ -52,52 +48,33 @@ struct MainView: View {
         }
     }
     
-    func returnColorByType() -> Color {
-        switch self.type {
-        case 3:
-            return Color.gray
-        case 2:
-            return Color.purple
-        case 1:
-            return Color.blue
-        default:
-            return Color.green
-        }
-    }
-    
     var body: some View {
         VStack {
-            HStack(alignment: .top, spacing: 100) {
+            HStack(alignment: .bottom, spacing: 0) {
                 VStack {
-                    NavigationLink(destination: OptionsView(optionsViewShown: $optionsViewShown), isActive: $optionsViewShown, label: {Text("GO")})
+                    NavigationLink(destination: OptionsView(optionsViewShown: $optionsViewShown), isActive: $optionsViewShown) {
+                        Image(systemName: "slider.horizontal.3").foregroundColor(Color.gray)
+                    }
                     .frame(width: 16, height: 16)
                     .clipShape(Circle())
-                }.frame(width: 180, alignment: .trailing)
+                    .buttonStyle(PlainButtonStyle())
+                }
+                .frame(width: WKInterfaceDevice.current().screenBounds.width, alignment: .trailing)
+                .position(x: WKInterfaceDevice.current().screenBounds.width * 0.4, y: WKInterfaceDevice.current().screenBounds.height * 0.1)
             }
             
-            Text("\((self.timeRemaining % 3600) / 60)")
-                .font(.system(size: 40))
-                .foregroundColor(returnColorByType()).onReceive(timer) { time in
-                    if self.timeRemaining > 0 && self.counterActive {
-                        self.timeRemaining -= 1
-                    } else if self.timeRemaining == 0 && self.counterActive {
-                        skipTimer()
-                        WKInterfaceDevice.current().play(.notification)
-                        WKInterfaceDevice.current().play(.notification)
-                        WKInterfaceDevice.current().play(.notification)
-                    }
-                }
+            TimerView(timerModel: TimerModel(time: 25, unit: .min, timerType: isActive ? .pomo : .stop, isActive: self.isActive))
             
             Divider()
             
             VStack {
-                Button("Skip", action: skipTimer).frame(width: 80, height: 50)
+                Button("Skip", action: skipTimer).frame(width: 80, height: 40).padding(4)
                 
                 HStack {
-                    Button(counterActive ? "Pause" : "Start", action: counterActive ? pauseTimer : startTimer)
-                        .frame(width: 80, height: 50)
+                    Button(isActive ? "Pause" : "Start", action: isActive ? pauseTimer : startTimer)
+                        .frame(width: 80, height: 40).padding(4)
                     Button("Cancel", action: cancelTimer)
-                        .frame(width: 80, height: 50)
+                        .frame(width: 80, height: 40).padding(4)
                 }
             }
         }
@@ -107,7 +84,7 @@ struct MainView: View {
 struct ContentView: View {
     var body: some View {
         NavigationView {
-            MainView()
+            MainView(pomodoroTimer: TimerModel.allTimerValues()[2], shortBreakTimer: TimerModel.allTimerValues()[0], longBreakTimer: TimerModel.allTimerValues()[1])
         }
     }
 }
